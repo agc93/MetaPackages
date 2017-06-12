@@ -31,6 +31,7 @@
     <RuntimeStoreZipNoTimestampDir>$(ArtifactsZipDir)n\</RuntimeStoreZipNoTimestampDir>
     <RuntimeStoreSymbolsZipTimestampDir>$(ArtifactsZipDir)st\</RuntimeStoreSymbolsZipTimestampDir>
     <RuntimeStoreSymbolsZipNoTimestampDir>$(ArtifactsZipDir)sn\</RuntimeStoreSymbolsZipNoTimestampDir>
+    <RuntimeStoreInstallerLayoutDirectory>$(ArtifactsDir)installerLayout\</RuntimeStoreInstallerLayoutDirectory>
     <TempDir>$(ArtifactsDir)temp\</TempDir>
     <ToolsDir>$(RepositoryRoot)tools\</ToolsDir>
     <DependencyBuildDirectory>$(RepositoryRoot).deps\build\</DependencyBuildDirectory>
@@ -42,7 +43,11 @@
       $(PrepareDependsOn);
       UpdateNuGetConfig
     </PrepareDependsOn>
+
+    <CLIBuildDll>$(ToolsDir)dotnet-cli-build\dotnet-cli-build.dll</CLIBuildDll>
   </PropertyGroup>
+  
+  <UsingTask TaskName="DotNetDebTool" AssemblyFile="$(CLIBuildDll)" />
 
   <Target Name="UpdateNuGetConfig">
     <UpdatePackageSource
@@ -288,5 +293,81 @@
     </ItemGroup>
 
     <ZipArchive File="%(MetaPackageNupkg.FullPath)" SourceFiles="@(ArchiveFiles)" WorkingDirectory="@(MetaPackageNupkg->'$(TempDir)%(Filename)')" Overwrite="true" />
+  </Target>
+
+  <Target Name="BuildInstallers">
+    <MSBuild Projects="$(ProjectPath)" Targets="GenerateDebs" />
+  </Target>
+
+  <Target Name="GenerateDebs"
+    DependsOnTargets="TestDebuild;BuildSdkDeb"/>
+
+  <Target Name="BuildSdkDeb"
+      Outputs="$(SdkInstallerFile)" >
+
+      <PropertyGroup>
+        <RuntimeStoreTGZ>$(ArtifactsDir)Build.RS.osx.tar.gz</RuntimeStoreTGZ>
+        <SdkDebianPackageName>aspnetcore-runtime-store.deb</SdkDebianPackageName>
+      </PropertyGroup>
+
+      <!-- Parse framework version -->
+      <GetDotNetHost>
+        <Output TaskParameter="DotNetDirectory" PropertyName="DotnetHomeDirectory" />
+      </GetDotNetHost>
+
+      <!-- Create layout: Aspnet runtime store -->
+      <MakeDir Directories="$(RuntimeStoreInstallerLayoutDirectory)" />
+      <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutDirectory)" />
+
+      <!-- Create layout: Generate and Place debian_config.json -->
+      <!--<ReplaceFileContents
+        InputFile="$(DebianConfigTemplateFile)"
+        DestinationFile="$(DebianConfigJsonFile)"
+        ReplacementItems="@(DebianConfigTokenValues)" />-->
+
+      <!-- Build SDK Deb package -->
+      <DotNetDebTool ToolPath="$(DotnetHomeDirectory)"
+                     InputDirectory="$(RuntimeStoreInstallerLayoutDirectory)"
+                     OutputDirectory="$(RuntimeStoreOutputPath)"
+                     PackageName="$(SdkDebianPackageName)"
+                     PackageVersion="1.0.0"
+                     WorkingDirectory="$(RuntimeStoreWorkingDirectory)" />
+
+      <!-- Copy SDK package to output -->
+      <ItemGroup>
+        <GeneratedDebFiles Include="$(DotNetDebToolOutputDirectory)/*.deb" />
+      </ItemGroup>
+
+      <Error Text="@(GeneratedDebFiles->Count()) .deb files generated." Condition="'@(GeneratedDebFiles->Count())' != 1" />
+
+      <Copy
+        DestinationFiles="$(SdkInstallerFile)"
+        SourceFiles="@(GeneratedDebFiles)"
+        OverwriteReadOnlyFiles="True"
+        SkipUnchangedFiles="False"
+        UseHardlinksIfPossible="False" />
+
+      <!-- Remove Shared Framework and Debian Packages -->
+      <Exec Command="sudo dpkg -r $(SdkDebianPackageName)" />
+  </Target>
+
+  <Target Name="TestDebuild">
+      <Message Text="Don't remove this" />
+
+      <!-- run Debuild -->
+      <Exec Command="/usr/bin/env debuild -h" ContinueOnError="true">
+          <Output TaskParameter="ExitCode" PropertyName="DebuildExitCode" />
+      </Exec>
+
+      <!-- Check if it returned 0 -->
+      <PropertyGroup>
+        <DebuildPresent>false</DebuildPresent>
+        <DebuildPresent Condition=" '$(DebuildExitCode)' == '0' ">true</DebuildPresent>
+      </PropertyGroup>
+
+      <!-- Workaround for Ubuntu16 Jenkins https://github.com/dotnet/core-setup/issues/167 -->
+      <Message Condition=" '$(DebuildPresent)'  != 'true' "
+               Text="Debuild Not found, Debian packages will not be built."
+               Importance="High" />
   </Target>
 </Project>
