@@ -31,12 +31,21 @@
     <RuntimeStoreZipNoTimestampDir>$(ArtifactsZipDir)n\</RuntimeStoreZipNoTimestampDir>
     <RuntimeStoreSymbolsZipTimestampDir>$(ArtifactsZipDir)st\</RuntimeStoreSymbolsZipTimestampDir>
     <RuntimeStoreSymbolsZipNoTimestampDir>$(ArtifactsZipDir)sn\</RuntimeStoreSymbolsZipNoTimestampDir>
-    <RuntimeStoreInstallerLayoutDirectory>$(ArtifactsDir)installerLayout\</RuntimeStoreInstallerLayoutDirectory>
+    <RuntimeStoreInstallerDirectory>$(ArtifactsDir)installers\</RuntimeStoreInstallerDirectory>
+    <RuntimeStoreInstallerLayoutTimestampDirectory>$(ArtifactsDir)itLayout\</RuntimeStoreInstallerLayoutTimestampDirectory>
+    <RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>$(RuntimeStoreInstallerLayoutTimestampDirectory)package_root\</RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>
+    <RuntimeStoreInstallerLayoutNoTimestampDirectory>$(ArtifactsDir)inLayout\</RuntimeStoreInstallerLayoutNoTimestampDirectory>
+    <RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory>$(RuntimeStoreInstallerLayoutNoTimestampDirectory)package_root\</RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory>
+    <RuntimeStoreInstallerOutputDirectory>$(ArtifactsDir)iOutput\</RuntimeStoreInstallerOutputDirectory>
     <TempDir>$(ArtifactsDir)temp\</TempDir>
     <ToolsDir>$(RepositoryRoot)tools\</ToolsDir>
     <DependencyBuildDirectory>$(RepositoryRoot).deps\build\</DependencyBuildDirectory>
     <RuntimeStoreReferenceDirectory>$(ToolsDir)Build.RuntimeStore.References\</RuntimeStoreReferenceDirectory>
     <RuntimeStoreReferencePackageDirectory>$(RuntimeStoreReferenceDirectory)bin\Release\</RuntimeStoreReferencePackageDirectory>
+    <!-- Testing only -->
+    <DebianConfigTemplateFile>$(ToolsDir)debian_config.json</DebianConfigTemplateFile>
+    <DotnetDebToolDirectory>$(ToolsDir)dotnet-deb-tool-consumer\</DotnetDebToolDirectory>
+    <RuntimeStoreTGZ>$(ArtifactsDir)Build.RS.osx.tar.gz</RuntimeStoreTGZ>
     <BuildTempDirectory>$(RepositoryRoot).build\temp\</BuildTempDirectory>
 
     <PrepareDependsOn>
@@ -299,56 +308,66 @@
     <MSBuild Projects="$(ProjectPath)" Targets="GenerateDebs" />
   </Target>
 
-  <Target Name="GenerateDebs"
-    DependsOnTargets="TestDebuild;BuildSdkDeb"/>
+  <Target Name="GenerateDebs" DependsOnTargets="TestDebuild">
+    <!-- Create layout: Aspnet runtime store -->
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
+    <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
+    <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
 
-  <Target Name="BuildSdkDeb"
-      Outputs="$(SdkInstallerFile)" >
+    <!-- Install dotnet-deb tool -->
+    <Exec Command="dotnet restore" WorkingDirectory="$(DotnetDebToolDirectory)" />
 
-      <PropertyGroup>
-        <RuntimeStoreTGZ>$(ArtifactsDir)Build.RS.osx.tar.gz</RuntimeStoreTGZ>
-        <SdkDebianPackageName>aspnetcore-runtime-store.deb</SdkDebianPackageName>
-      </PropertyGroup>
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildSdkDeb" Properties="InstallerPlatform=ubuntu.16.10" />
+  </Target>
 
-      <!-- Parse framework version -->
-      <GetDotNetHost>
-        <Output TaskParameter="DotNetDirectory" PropertyName="DotnetHomeDirectory" />
-      </GetDotNetHost>
+  <Target Name="BuildSdkDeb">
+    <PropertyGroup>
+      <SdkDebianPackageTimestampName>aspnetcore-store-$(InstallerPlatform)-$(TimestampVersion)-$(PACKAGE_CACHE_PLATFORM).deb</SdkDebianPackageTimestampName>
+      <SdkDebianPackageNoTimestampName>aspnetcore-store-$(InstallerPlatform)-$(NoTimestampVersion)-$(PACKAGE_CACHE_PLATFORM).deb</SdkDebianPackageNoTimestampName>
+    </PropertyGroup>
 
-      <!-- Create layout: Aspnet runtime store -->
-      <MakeDir Directories="$(RuntimeStoreInstallerLayoutDirectory)" />
-      <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutDirectory)" />
+    <!-- Create layout: Generate and Place debian_config.json -->
+    <Copy
+      SourceFiles="$(DebianConfigTemplateFile)"
+      DestinationFiles="$(RuntimeStoreInstallerLayoutTimestampDirectory)debian_config.json"
+      OverwriteReadOnlyFiles="True"
+      SkipUnchangedFiles="False"
+      UseHardlinksIfPossible="False" />
+    <Copy
+      SourceFiles="$(DebianConfigTemplateFile)"
+      DestinationFiles="$(RuntimeStoreInstallerLayoutNoTimestampDirectory)debian_config.json"
+      OverwriteReadOnlyFiles="True"
+      SkipUnchangedFiles="False"
+      UseHardlinksIfPossible="False" />
 
-      <!-- Create layout: Generate and Place debian_config.json -->
-      <!--<ReplaceFileContents
-        InputFile="$(DebianConfigTemplateFile)"
-        DestinationFile="$(DebianConfigJsonFile)"
-        ReplacementItems="@(DebianConfigTokenValues)" />-->
+    <!-- Clear the output dir -->
+    <RemoveDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
+    <MakeDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
 
-      <!-- Build SDK Deb package -->
-      <DotNetDebTool ToolPath="$(DotnetHomeDirectory)"
-                     InputDirectory="$(RuntimeStoreInstallerLayoutDirectory)"
-                     OutputDirectory="$(RuntimeStoreOutputPath)"
-                     PackageName="$(SdkDebianPackageName)"
-                     PackageVersion="1.0.0"
-                     WorkingDirectory="$(RuntimeStoreWorkingDirectory)" />
+    <!-- Build SDK Timestamp Deb package -->
+    <Exec Command="dotnet deb-tool -i $(RuntimeStoreInstallerLayoutTimestampDirectory) -o $(RuntimeStoreInstallerOutputDirectory) -n $(SdkDebianPackageTimestampName) -v $(TimestampVersion)"
+      WorkingDirectory="$(DotnetDebToolDirectory)" />
 
-      <!-- Copy SDK package to output -->
-      <ItemGroup>
-        <GeneratedDebFiles Include="$(DotNetDebToolOutputDirectory)/*.deb" />
-      </ItemGroup>
+    <!-- Build SDK NoTimestamp Deb package -->
+    <Exec Command="dotnet deb-tool -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory) -o $(RuntimeStoreInstallerOutputDirectory) -n $(SdkDebianPackageNoTimestampName) -v $(NoTimestampVersion)"
+      WorkingDirectory="$(DotnetDebToolDirectory)" />
 
-      <Error Text="@(GeneratedDebFiles->Count()) .deb files generated." Condition="'@(GeneratedDebFiles->Count())' != 1" />
+    <!-- Copy SDK package to output -->
+    <ItemGroup>
+      <GeneratedDebFiles Include="$(RuntimeStoreInstallerOutputDirectory)/*.deb" />
+    </ItemGroup>
 
-      <Copy
-        DestinationFiles="$(SdkInstallerFile)"
-        SourceFiles="@(GeneratedDebFiles)"
-        OverwriteReadOnlyFiles="True"
-        SkipUnchangedFiles="False"
-        UseHardlinksIfPossible="False" />
+    <Error Text="@(GeneratedDebFiles->Count()) .deb files generated." Condition="'@(GeneratedDebFiles->Count())' != 2" />
 
-      <!-- Remove Shared Framework and Debian Packages -->
-      <Exec Command="sudo dpkg -r $(SdkDebianPackageName)" />
+    <Copy
+      DestinationFolder="$(RuntimeStoreInstallerDirectory)"
+      SourceFiles="@(GeneratedDebFiles)"
+      OverwriteReadOnlyFiles="True"
+      SkipUnchangedFiles="False"
+      UseHardlinksIfPossible="False" /> 
   </Target>
 
   <Target Name="TestDebuild">
