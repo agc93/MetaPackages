@@ -13,25 +13,13 @@ RUN apt-get update && \
         unzip \
         gettext \
         sudo && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# This could become a "microsoft/coreclr" image, since it just installs the dependencies for CoreCLR (and stdlib)
-RUN apt-get update &&\
-    apt-get -qqy install \
         libunwind8 \
         libkrb5-3 \
         libicu52 \
         liblttng-ust0 \
         libssl1.0.0 \
         zlib1g \
-        libuuid1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Build Prereqs
-RUN apt-get update && \
-    apt-get -qqy install \
+        libuuid1 \
         debhelper \
         build-essential \
         devscripts \

@@ -39,6 +39,7 @@
     <RuntimeStoreInstallerOutputDirectory>$(ArtifactsDir)iOutput\</RuntimeStoreInstallerOutputDirectory>
     <TempDir>$(ArtifactsDir)temp\</TempDir>
     <ToolsDir>$(RepositoryRoot)tools\</ToolsDir>
+    <DockerDir>$(ToolsDir)docker\</DockerDir>
     <DependencyBuildDirectory>$(RepositoryRoot).deps\build\</DependencyBuildDirectory>
     <RuntimeStoreReferenceDirectory>$(ToolsDir)Build.RuntimeStore.References\</RuntimeStoreReferenceDirectory>
     <RuntimeStoreReferencePackageDirectory>$(RuntimeStoreReferenceDirectory)bin\Release\</RuntimeStoreReferencePackageDirectory>
@@ -320,13 +321,13 @@
     <!-- Install dotnet-deb tool -->
     <Exec Command="dotnet restore" WorkingDirectory="$(DotnetDebToolDirectory)" />
 
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildSdkDeb" Properties="InstallerPlatform=ubuntu.16.10" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.4" />
   </Target>
 
-  <Target Name="BuildSdkDeb">
+  <Target Name="BuildRuntimeStoreDeb">
     <PropertyGroup>
-      <SdkDebianPackageTimestampName>aspnetcore-store-$(InstallerPlatform)-$(TimestampVersion)-$(PACKAGE_CACHE_PLATFORM).deb</SdkDebianPackageTimestampName>
-      <SdkDebianPackageNoTimestampName>aspnetcore-store-$(InstallerPlatform)-$(NoTimestampVersion)-$(PACKAGE_CACHE_PLATFORM).deb</SdkDebianPackageNoTimestampName>
+      <SdkDebianPackageTimestampName>aspnetcore-store-$(TimestampVersion)-$(InstallerPlatform)-$(PACKAGE_CACHE_PLATFORM)</SdkDebianPackageTimestampName>
+      <SdkDebianPackageNoTimestampName>aspnetcore-store-$(NoTimestampVersion)-$(InstallerPlatform)-$(PACKAGE_CACHE_PLATFORM)</SdkDebianPackageNoTimestampName>
     </PropertyGroup>
 
     <!-- Create layout: Generate and Place debian_config.json -->
@@ -347,12 +348,35 @@
     <RemoveDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
 
+    <!-- Build Docker Image -->
+    <Exec 
+      Command="docker build --build-arg USER_ID=%24(id -u) -t docker-image-$(InstallerPlatform) $(InstallerPlatform)"
+      WorkingDirectory="$(DockerDir)" />
+
     <!-- Build SDK Timestamp Deb package -->
-    <Exec Command="dotnet deb-tool -i $(RuntimeStoreInstallerLayoutTimestampDirectory) -o $(RuntimeStoreInstallerOutputDirectory) -n $(SdkDebianPackageTimestampName) -v $(TimestampVersion)"
+    <Exec Command="docker run 
+      -v %24(pwd):/opt/code 
+      -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true 
+      -w tools/dotnet-deb-tool-consumer 
+      docker-image-$(InstallerPlatform) 
+      dotnet deb-tool 
+        -i $(RuntimeStoreInstallerLayoutTimestampDirectory) 
+        -o $(RuntimeStoreInstallerOutputDirectory) 
+        -n $(SdkDebianPackageTimestampName) 
+        -v $(TimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
 
     <!-- Build SDK NoTimestamp Deb package -->
-    <Exec Command="dotnet deb-tool -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory) -o $(RuntimeStoreInstallerOutputDirectory) -n $(SdkDebianPackageNoTimestampName) -v $(NoTimestampVersion)"
+    <Exec Command="docker run 
+      -v %24(pwd):/opt/code 
+      -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true 
+      -w tools/dotnet-deb-tool-consumer 
+      docker-image-$(InstallerPlatform) 
+      dotnet deb-tool 
+        -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory) 
+        -o $(RuntimeStoreInstallerOutputDirectory) 
+        -n $(SdkDebianPackageNoTimestampName) 
+        -v $(NoTimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
 
     <!-- Copy SDK package to output -->

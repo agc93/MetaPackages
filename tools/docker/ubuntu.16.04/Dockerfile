@@ -8,35 +8,26 @@ FROM ubuntu:16.04
 # Install the base toolchain we need to build anything (clang, cmake, make and the like)
 # this does not include libraries that we need to compile different projects, we'd like
 # them in a different layer.
-RUN rm -rf rm -rf /var/lib/apt/lists/* && \
-    apt-get clean && \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y cmake \
-            make \
-            llvm-3.5 \
-            clang-3.5 \
-            git \
-            curl \
-            tar \
-            sudo && \
-    apt-get clean
-
-# Install Build Prereqs
-RUN apt-get -qqy install \
+        make \
+        llvm-3.5 \
+        clang-3.5 \
+        git \
+        curl \
+        tar \
+        sudo \
         debhelper \
         build-essential \
-        devscripts && \
-    apt-get clean
-
-# Dependencies for CoreCLR and CoreFX
-RUN apt-get install -y  libunwind8 \
-            libkrb5-3 \
-            libicu55 \
-            liblttng-ust0 \
-            libssl1.0.0 \
-            zlib1g \
-            libuuid1 \
-            liblldb-3.6 && \
+        devscripts \
+        libunwind8 \
+        libkrb5-3 \
+        libicu55 \
+        liblttng-ust0 \
+        libssl1.0.0 \
+        zlib1g \
+        libuuid1 \
+        liblldb-3.6 && \
     apt-get clean
 
 # Setup User to match Host User, and give superuser permissions
