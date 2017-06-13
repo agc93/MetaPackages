@@ -321,7 +321,7 @@
     <!-- Install dotnet-deb tool -->
     <Exec Command="dotnet restore" WorkingDirectory="$(DotnetDebToolDirectory)" />
 
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.4" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.10" />
   </Target>
 
   <Target Name="BuildRuntimeStoreDeb">
