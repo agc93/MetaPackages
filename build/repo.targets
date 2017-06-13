@@ -46,7 +46,9 @@
     <!-- Testing only -->
     <DebianConfigTemplateFile>$(ToolsDir)debian_config.json</DebianConfigTemplateFile>
     <DotnetDebToolDirectory>$(ToolsDir)dotnet-deb-tool-consumer\</DotnetDebToolDirectory>
-    <BuildTempDirectory>$(RepositoryRoot).build\temp\</BuildTempDirectory>
+    <BuildDirectory>$(RepositoryRoot).build\</BuildDirectory>
+    <BuildTempDirectory>$(BuildDirectory)temp\</BuildTempDirectory>
+    <BuildDotnetDirectory>$(BuildDirectory)dotnet\</BuildDotnetDirectory>
 
     <PrepareDependsOn>
       $(PrepareDependsOn);
@@ -328,7 +330,7 @@
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian" />
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.14.04" />
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.04" />
-    <!--<MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.10" />-->
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.10" />
   </Target>
 
   <Target Name="BuildRuntimeStoreDeb">
@@ -359,14 +361,26 @@
       Command="docker build --build-arg USER_ID=%24(id -u) -t docker-image-$(InstallerPlatform) $(InstallerPlatform)"
       WorkingDirectory="$(DockerDir)" />
 
+    <!-- Parse CLI version -->
+    <ReadLinesFromFile File="$(BuildDirectory)cli.version">
+      <Output TaskParameter="Lines" PropertyName="CLIVersionNumber" />
+    </ReadLinesFromFile>
+
     <!-- Build SDK Deb package -->
     <Exec Command="docker run
       --rm
       -v %24(pwd):/opt/code
       -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
+      -e KOREBUILD_SKIP_RUNTIME_INSTALL=true
       -e RUNTIMESTORE_INSTALLERNAME=$(SdkDebianPackageTimestampName)
       docker-image-$(InstallerPlatform)
-      ./build.sh /t:RunDebTool"
+      /bin/bash -c &quot;
+        /opt/code/.build/dotnet/dotnet-install.sh
+          --channel preview
+          --version $(CLIVersionNumber) &amp;&amp;
+        export PATH=$PATH:/home/code_executor/.dotnet &amp;&amp;
+        ./build.sh /t:RunDebTool
+      &quot;"
       WorkingDirectory="$(RepositoryRoot)"
       ContinueOnError="WarnAndContinue" />
 
