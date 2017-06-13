@@ -55,7 +55,7 @@
 
     <CLIBuildDll>$(ToolsDir)dotnet-cli-build\dotnet-cli-build.dll</CLIBuildDll>
   </PropertyGroup>
-  
+
   <UsingTask TaskName="DotNetDebTool" AssemblyFile="$(CLIBuildDll)" />
 
   <Target Name="UpdateNuGetConfig">
@@ -313,8 +313,8 @@
     <Error Text="RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY is not specified. This requires a path like \\aspnetci\drops\Coherence-Signed\{branch}\{build-number}" Condition="'$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)' == ''"/>
 
     <ItemGroup>
-      <RuntimeStoreTimestampArchive>$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux-*</RuntimeStoreTimestampArchive>
-      <RuntimeStoreNoTimestampArchive>$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux.*</RuntimeStoreNoTimestampArchive>
+      <RuntimeStoreTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux-*"/>
+      <RuntimeStoreNoTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux.*"/>
     </ItemGroup>
 
     <!-- Create layout: Aspnet runtime store -->
@@ -355,18 +355,18 @@
     <MakeDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
 
     <!-- Build Docker Image -->
-    <Exec 
+    <Exec
       Command="docker build --build-arg USER_ID=%24(id -u) -t docker-image-$(InstallerPlatform) $(InstallerPlatform)"
       WorkingDirectory="$(DockerDir)" />
 
     <!-- Build SDK Deb package -->
-    <Exec Command="docker run 
+    <Exec Command="docker run
       --rm
-      -v %24(pwd):/opt/code 
+      -v %24(pwd):/opt/code
       -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
       -e RUNTIMESTORE_INSTALLERNAME=$(SdkDebianPackageTimestampName)
-      docker-image-$(InstallerPlatform) 
-      ./build.sh /t:RunDebTool" 
+      docker-image-$(InstallerPlatform)
+      ./build.sh /t:RunDebTool"
       WorkingDirectory="$(RepositoryRoot)"
       ContinueOnError="WarnAndContinue" />
 
@@ -385,7 +385,7 @@
       SourceFiles="@(GeneratedDebFiles)"
       OverwriteReadOnlyFiles="True"
       SkipUnchangedFiles="False"
-      UseHardlinksIfPossible="False" /> 
+      UseHardlinksIfPossible="False" />
   </Target>
 
   <Target Name="RunDebTool">
@@ -394,19 +394,19 @@
 
     <!-- Build SDK Timestamp Deb package -->
     <Exec Command="
-      dotnet deb-tool 
-        -i $(RuntimeStoreInstallerLayoutTimestampDirectory) 
-        -o $(RuntimeStoreInstallerOutputDirectory) 
-        -n $(RUNTIMESTORE_INSTALLERNAME) 
+      dotnet deb-tool
+        -i $(RuntimeStoreInstallerLayoutTimestampDirectory)
+        -o $(RuntimeStoreInstallerOutputDirectory)
+        -n $(RUNTIMESTORE_INSTALLERNAME)
         -v $(TimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
 
     <!-- Build SDK NoTimestamp Deb package -->
     <Exec Command="
-      dotnet deb-tool 
-        -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory) 
-        -o $(RuntimeStoreInstallerOutputDirectory) 
-        -n $(RUNTIMESTORE_INSTALLERNAME) 
+      dotnet deb-tool
+        -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory)
+        -o $(RuntimeStoreInstallerOutputDirectory)
+        -n $(RUNTIMESTORE_INSTALLERNAME)
         -v $(NoTimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
   </Target>
