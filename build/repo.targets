@@ -46,7 +46,6 @@
     <!-- Testing only -->
     <DebianConfigTemplateFile>$(ToolsDir)debian_config.json</DebianConfigTemplateFile>
     <DotnetDebToolDirectory>$(ToolsDir)dotnet-deb-tool-consumer\</DotnetDebToolDirectory>
-    <RuntimeStoreTGZ>$(ArtifactsDir)Build.RS.osx.tar.gz</RuntimeStoreTGZ>
     <BuildTempDirectory>$(RepositoryRoot).build\temp\</BuildTempDirectory>
 
     <PrepareDependsOn>
@@ -310,13 +309,21 @@
   </Target>
 
   <Target Name="GenerateDebs">
+
+    <Error Text="RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY is not specified. This requires a path like \\aspnetci\drops\Coherence-Signed\{branch}\{build-number}" Condition="'$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)' == ''"/>
+
+    <ItemGroup>
+      <RuntimeStoreTimestampArchive>$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux-*</RuntimeStoreTimestampArchive>
+      <RuntimeStoreNoTimestampArchive>$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux.*</RuntimeStoreNoTimestampArchive>
+    </ItemGroup>
+
     <!-- Create layout: Aspnet runtime store -->
     <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
-    <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <Exec Command="tar -xzf @(RuntimeStoreTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
     <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
-    <Exec Command="tar -xzf $(RuntimeStoreTGZ) -C $(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
+    <Exec Command="tar -xzf @(RuntimeStoreNoTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
 
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian" />
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.14.04" />
