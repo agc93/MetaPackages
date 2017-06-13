@@ -366,7 +366,8 @@
       -e RUNTIMESTORE_INSTALLERNAME=$(SdkDebianPackageTimestampName)
       docker-image-$(InstallerPlatform) 
       ./build.sh /t:RunDebTool" 
-      WorkingDirectory="$(RepositoryRoot)" />
+      WorkingDirectory="$(RepositoryRoot)"
+      ContinueOnError="WarnAndContinue" />
 
     <!-- Copy SDK package to output -->
     <ItemGroup>
