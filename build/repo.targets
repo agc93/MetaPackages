@@ -361,6 +361,7 @@
 
     <!-- Build SDK Deb package -->
     <Exec Command="docker run 
+      --rm
       -v %24(pwd):/opt/code 
       -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
       -e RUNTIMESTORE_INSTALLERNAME=$(SdkDebianPackageTimestampName)
@@ -368,6 +369,9 @@
       ./build.sh /t:RunDebTool" 
       WorkingDirectory="$(RepositoryRoot)"
       ContinueOnError="WarnAndContinue" />
+
+    <!-- Remove Docker Image to save disk space -->
+    <Exec Command="docker rmi docker-image-$(InstallerPlatform)" />
 
     <!-- Copy SDK package to output -->
     <ItemGroup>
