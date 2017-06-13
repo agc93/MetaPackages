@@ -27,7 +27,8 @@ RUN apt-get update && \
         libssl1.0.0 \
         zlib1g \
         libuuid1 \
-        liblldb-3.6 && \
+        liblldb-3.6 \
+        wget && \
     apt-get clean
 
 # Setup User to match Host User, and give superuser permissions

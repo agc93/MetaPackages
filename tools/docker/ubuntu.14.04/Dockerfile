@@ -26,7 +26,8 @@ RUN apt-get update && \
         git \
         cmake \
         clang-3.5 \
-        lldb-3.6 && \
+        lldb-3.6 \
+        wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

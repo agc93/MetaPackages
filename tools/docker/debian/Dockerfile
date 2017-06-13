@@ -12,7 +12,7 @@ RUN apt-get update && \
         curl \
         unzip \
         gettext \
-        sudo && \
+        sudo \
         libunwind8 \
         libkrb5-3 \
         libicu52 \
@@ -25,7 +25,8 @@ RUN apt-get update && \
         devscripts \
         git \
         cmake \
-        clang-3.5 && \
+        clang-3.5 \
+        wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
