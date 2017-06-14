@@ -308,6 +308,13 @@
 
     <Error Text="RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY is not specified. This requires a path like \\aspnetci\drops\Coherence-Signed\{branch}\{build-number}" Condition="'$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)' == ''"/>
 
+    <!-- Check Docker server OS -->
+    <Exec Command="docker version -f &quot;{{.Server.Os}}&quot;" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="DockerHostOS" />
+    </Exec>
+
+    <Error Text="Docker host must be using Linux containers." Condition="'$(DockerHostOS)' != 'linux'"/>
+
     <ItemGroup>
       <RuntimeStoreTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux-*"/>
       <RuntimeStoreNoTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux.*"/>
