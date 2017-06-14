@@ -36,7 +36,8 @@
     <RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>$(RuntimeStoreInstallerLayoutTimestampDirectory)package_root\</RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>
     <RuntimeStoreInstallerLayoutNoTimestampDirectory>$(ArtifactsDir)inLayout\</RuntimeStoreInstallerLayoutNoTimestampDirectory>
     <RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory>$(RuntimeStoreInstallerLayoutNoTimestampDirectory)package_root\</RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory>
-    <RuntimeStoreInstallerOutputDirectory>$(ArtifactsDir)iOutput\</RuntimeStoreInstallerOutputDirectory>
+    <RuntimeStoreInstallerOutputTimeStampDirectory>$(ArtifactsDir)itOutput\</RuntimeStoreInstallerOutputTimeStampDirectory>
+    <RuntimeStoreInstallerOutputNoTimeStampDirectory>$(ArtifactsDir)inOutput\</RuntimeStoreInstallerOutputNoTimeStampDirectory>
     <TempDir>$(ArtifactsDir)temp\</TempDir>
     <ToolsDir>$(RepositoryRoot)tools\</ToolsDir>
     <DockerDir>$(ToolsDir)docker\</DockerDir>
@@ -335,7 +336,10 @@
 
   <Target Name="BuildRuntimeStoreDeb">
     <PropertyGroup>
-      <SdkDebianPackageTimestampName>aspnetcore-store-$(InstallerPlatform)-$(PACKAGE_CACHE_PLATFORM)</SdkDebianPackageTimestampName>
+      <RuntimeStoreTimestampDebianPackageName>aspnetcore-store-$(TimestampVersion)</RuntimeStoreTimestampDebianPackageName>
+      <RuntimeStoreNoTimestampDebianPackageName>aspnetcore-store-$(NoTimestampVersion)</RuntimeStoreNoTimestampDebianPackageName>
+      <RuntimeStoreTimestampDebianFileName>$(RuntimeStoreTimestampDebianPackageName)-$(InstallerPlatform)-$(PACKAGE_CACHE_PLATFORM).deb</RuntimeStoreTimestampDebianFileName>
+      <RuntimeStoreNoTimestampDebianFileName>$(RuntimeStoreNoTimestampDebianPackageName)-$(InstallerPlatform)-$(PACKAGE_CACHE_PLATFORM).deb</RuntimeStoreNoTimestampDebianFileName>
     </PropertyGroup>
 
     <!-- Create layout: Generate and Place debian_config.json -->
@@ -353,8 +357,10 @@
       UseHardlinksIfPossible="False" />
 
     <!-- Clear the output dir -->
-    <RemoveDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
-    <MakeDir Directories="$(RuntimeStoreInstallerOutputDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerOutputTimeStampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerOutputNoTimeStampDirectory)" />
+    <MakeDir Directories="$(RuntimeStoreInstallerOutputTimeStampDirectory)" />
+    <MakeDir Directories="$(RuntimeStoreInstallerOutputNoTimeStampDirectory)" />
 
     <!-- Build Docker Image -->
     <Exec
@@ -372,7 +378,9 @@
       -v %24(pwd):/opt/code
       -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true
       -e KOREBUILD_SKIP_RUNTIME_INSTALL=true
-      -e RUNTIMESTORE_INSTALLERNAME=$(SdkDebianPackageTimestampName)
+      -e BuildNumber=$(BuildNumber)
+      -e RUNTIMESTORE_TIMESTAMP_INSTALLERNAME=$(RuntimeStoreTimestampDebianPackageName)
+      -e RUNTIMESTORE_NOTIMESTAMP_INSTALLERNAME=$(RuntimeStoreNoTimestampDebianPackageName)
       docker-image-$(InstallerPlatform)
       /bin/bash -c &quot;
         /opt/code/.build/dotnet/dotnet-install.sh
@@ -389,14 +397,22 @@
 
     <!-- Copy SDK package to output -->
     <ItemGroup>
-      <GeneratedDebFiles Include="$(RuntimeStoreInstallerOutputDirectory)/*.deb" />
+      <GeneratedTimestampDebFiles Include="$(RuntimeStoreInstallerOutputTimeStampDirectory)/*.deb" />
+      <GeneratedNoTimestampDebFiles Include="$(RuntimeStoreInstallerOutputNoTimeStampDirectory)/*.deb" />
     </ItemGroup>
 
-    <Error Text="@(GeneratedDebFiles->Count()) .deb files generated." Condition="'@(GeneratedDebFiles->Count())' != 2" />
+    <Error Text="@(GeneratedTimestampDebFiles->Count()) .deb files generated." Condition="'@(GeneratedTimestampDebFiles->Count())' != 1" />
+    <Error Text="@(GeneratedNoTimestampDebFiles->Count()) .deb files generated." Condition="'@(GeneratedTimestampDebFiles->Count())' != 1" />
 
     <Copy
-      DestinationFolder="$(RuntimeStoreInstallerDirectory)"
-      SourceFiles="@(GeneratedDebFiles)"
+      DestinationFiles="$(RuntimeStoreInstallerDirectory)$(RuntimeStoreTimestampDebianFileName)"
+      SourceFiles="@(GeneratedTimestampDebFiles)"
+      OverwriteReadOnlyFiles="True"
+      SkipUnchangedFiles="False"
+      UseHardlinksIfPossible="False" />
+    <Copy
+      DestinationFiles="$(RuntimeStoreInstallerDirectory)$(RuntimeStoreNoTimestampDebianFileName)"
+      SourceFiles="@(GeneratedNoTimestampDebFiles)"
       OverwriteReadOnlyFiles="True"
       SkipUnchangedFiles="False"
       UseHardlinksIfPossible="False" />
@@ -410,8 +426,8 @@
     <Exec Command="
       dotnet deb-tool
         -i $(RuntimeStoreInstallerLayoutTimestampDirectory)
-        -o $(RuntimeStoreInstallerOutputDirectory)
-        -n $(RUNTIMESTORE_INSTALLERNAME)
+        -o $(RuntimeStoreInstallerOutputTimeStampDirectory)
+        -n $(RUNTIMESTORE_TIMESTAMP_INSTALLERNAME)
         -v $(TimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
 
@@ -419,8 +435,8 @@
     <Exec Command="
       dotnet deb-tool
         -i $(RuntimeStoreInstallerLayoutNoTimestampDirectory)
-        -o $(RuntimeStoreInstallerOutputDirectory)
-        -n $(RUNTIMESTORE_INSTALLERNAME)
+        -o $(RuntimeStoreInstallerOutputNoTimeStampDirectory)
+        -n $(RUNTIMESTORE_NOTIMESTAMP_INSTALLERNAME)
         -v $(NoTimestampVersion)"
       WorkingDirectory="$(DotnetDebToolDirectory)" />
   </Target>
