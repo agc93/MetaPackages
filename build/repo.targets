@@ -32,6 +32,7 @@
     <RuntimeStoreSymbolsZipTimestampDir>$(ArtifactsZipDir)st\</RuntimeStoreSymbolsZipTimestampDir>
     <RuntimeStoreSymbolsZipNoTimestampDir>$(ArtifactsZipDir)sn\</RuntimeStoreSymbolsZipNoTimestampDir>
     <RuntimeStoreInstallerDirectory>$(ArtifactsDir)installers\</RuntimeStoreInstallerDirectory>
+    <RuntimeStoreArchiveDirectory>$(ArtifactsDir)rsArchive\</RuntimeStoreArchiveDirectory>
     <RuntimeStoreInstallerLayoutTimestampDirectory>$(ArtifactsDir)itLayout\</RuntimeStoreInstallerLayoutTimestampDirectory>
     <RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>$(RuntimeStoreInstallerLayoutTimestampDirectory)package_root\</RuntimeStoreInstallerLayoutPackageRootTimestampDirectory>
     <RuntimeStoreInstallerLayoutNoTimestampDirectory>$(ArtifactsDir)inLayout\</RuntimeStoreInstallerLayoutNoTimestampDirectory>
@@ -46,6 +47,7 @@
     <RuntimeStoreReferencePackageDirectory>$(RuntimeStoreReferenceDirectory)bin\Release\</RuntimeStoreReferencePackageDirectory>
     <DebianConfigTemplateFile>$(ToolsDir)debian_config.json</DebianConfigTemplateFile>
     <DotnetDebToolDirectory>$(ToolsDir)dotnet-deb-tool-consumer\</DotnetDebToolDirectory>
+    <RestoreRuntimeStoreDirectory>$(ToolsDir)RestoreRuntimeStore\</RestoreRuntimeStoreDirectory>
     <BuildDirectory>$(RepositoryRoot).build\</BuildDirectory>
     <BuildTempDirectory>$(BuildDirectory)temp\</BuildTempDirectory>
     <BuildDotnetDirectory>$(BuildDirectory)dotnet\</BuildDotnetDirectory>
@@ -306,8 +308,6 @@
 
   <Target Name="GenerateDebs">
 
-    <Error Text="RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY is not specified. This requires a path like \\aspnetci\drops\Coherence-Signed\{branch}\{build-number}" Condition="'$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)' == ''"/>
-
     <!-- Check Docker server OS -->
     <Exec Command="docker version -f &quot;{{.Server.Os}}&quot;" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="DockerHostOS" />
@@ -315,10 +315,16 @@
 
     <Error Text="Docker host must be using Linux containers." Condition="'$(DockerHostOS)' != 'linux'"/>
 
+    <!-- Download runtime store archives -->
+    <Exec Command="dotnet restore --packages $(RuntimeStoreArchiveDirectory)" WorkingDirectory="$(RestoreRuntimeStoreDirectory)" />
+
     <ItemGroup>
-      <RuntimeStoreTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux-*"/>
-      <RuntimeStoreNoTimestampArchive Include="$(RUNTIMESTORE_SIGNEDARCHIVEDIRECTORY)Signed\PackageCache\Build.RS.linux.*"/>
+      <RuntimeStoreTimestampArchive Include="$(RuntimeStoreArchiveDirectory)**\Build.RS.linux-*"/>
+      <RuntimeStoreNoTimestampArchive Include="$(RuntimeStoreArchiveDirectory)**\Build.RS.linux.*"/>
     </ItemGroup>
+
+    <Error Text="@(RuntimeStoreTimestampArchive->Count()) timestamp linux archives found." Condition="'@(RuntimeStoreTimestampArchive->Count())' != 1" />
+    <Error Text="@(RuntimeStoreNoTimestampArchive->Count()) no timestamp linux archives found." Condition="'@(RuntimeStoreNoTimestampArchive->Count())' != 1" />
 
     <!-- Create layout: Aspnet runtime store -->
     <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
