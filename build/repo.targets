@@ -310,7 +310,7 @@
     <ZipArchive File="%(MetaPackageNupkg.FullPath)" SourceFiles="@(ArchiveFiles)" WorkingDirectory="@(MetaPackageNupkg->'$(TempDir)%(Filename)')" Overwrite="true" />
   </Target>
 
-  <Target Name="BuildInstallers" DependsOnTargets="GenerateRpms" />
+  <Target Name="BuildInstallers" DependsOnTargets="GenerateDebs;GenerateRpms" />
 
   <Target Name="EnsureInstallerPrerequisites">
     <!-- Check Docker server OS -->
@@ -441,7 +441,7 @@
       WorkingDirectory="$(RepositoryRoot)"/>
 
     <!-- Remove Docker Image to save disk space -->
-    <!--<Exec Command="docker rmi docker-image-$(InstallerPlatform)" />-->
+    <Exec Command="docker rmi docker-image-$(InstallerPlatform)" />
 
     <!-- Copy Runtime Store package to output -->
     <ItemGroup>
