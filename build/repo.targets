@@ -22,7 +22,6 @@
     <NoTimestampVersion>$(VersionPrefix)-$(OriginalVersionSuffix)-$(NoTimestampSuffix)</NoTimestampVersion>
     <TimestampVersion>$(VersionPrefix)-$(OriginalVersionSuffix)-$(BuildNumber)</TimestampVersion>
 
-
     <RuntimeStoreTimestampInstallerPackageName>aspnetcore-store-$(TimestampVersion)</RuntimeStoreTimestampInstallerPackageName>
     <RuntimeStoreNoTimestampInstallerPackageName>aspnetcore-store-$(NoTimestampVersion)</RuntimeStoreNoTimestampInstallerPackageName>
 
@@ -334,28 +333,32 @@
 
   <Target Name="GenerateRpms" DependsOnTargets="EnsureInstallerPrerequisites">
     <!-- Create layout: Aspnet runtime store -->
-    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
     <Exec Command="tar -xzf @(RuntimeStoreTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
-    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutNoTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
     <Exec Command="tar -xzf @(RuntimeStoreNoTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
 
-    <!-- Create layout: Generate and Place chagelog -->
+    <!-- Create layout: Place changelog -->
     <Copy
       SourceFiles="$(RPMChangelogTemplateFile)"
-      DestinationFiles="$(RuntimeStoreInstallerLayoutTimestampDirectory)templates\changelog"
+      DestinationFiles="$(RuntimeStoreInstallerLayoutTimestampDirectory)templates/changelog"
       OverwriteReadOnlyFiles="True"
       SkipUnchangedFiles="False"
       UseHardlinksIfPossible="False" />
     <Copy
       SourceFiles="$(RPMChangelogTemplateFile)"
-      DestinationFiles="$(RuntimeStoreInstallerLayoutNoTimestampDirectory)templates\changelog"
+      DestinationFiles="$(RuntimeStoreInstallerLayoutNoTimestampDirectory)templates/changelog"
       OverwriteReadOnlyFiles="True"
       SkipUnchangedFiles="False"
       UseHardlinksIfPossible="False" />
 
-    <!-- TODO: update changelog file -->
+    <!-- Update Date and Version -->
+    <Exec Command="sed -i -e 's/DATE/$([System.DateTime]::UtcNow.ToString(ddd MMM dd yyyy))/' $(RuntimeStoreInstallerLayoutTimestampDirectory)templates/changelog" />
+    <Exec Command="sed -i -e 's/DATE/$([System.DateTime]::UtcNow.ToString(ddd MMM dd yyyy))/' $(RuntimeStoreInstallerLayoutNoTimestampDirectory)templates/changelog" />
+    <Exec Command="sed -i -e 's/PACKAGE_VERSION/$(TimestampVersion)/' $(RuntimeStoreInstallerLayoutTimestampDirectory)templates/changelog" />
+    <Exec Command="sed -i -e 's/PACKAGE_VERSION/$(NoTimestampVersion)/' $(RuntimeStoreInstallerLayoutNoTimestampDirectory)templates/changelog" />
 
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreRPM" Properties="InstallerPlatform=rhel" />
   </Target>
@@ -468,10 +471,10 @@
 
   <Target Name="GenerateDebs" DependsOnTargets="EnsureInstallerPrerequisites">
     <!-- Create layout: Aspnet runtime store -->
-    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
     <Exec Command="tar -xzf @(RuntimeStoreTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootTimestampDirectory)" />
-    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
+    <RemoveDir Directories="$(RuntimeStoreInstallerLayoutNoTimestampDirectory)" />
     <MakeDir Directories="$(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
     <Exec Command="tar -xzf @(RuntimeStoreNoTimestampArchive) -C $(RuntimeStoreInstallerLayoutPackageRootNoTimestampDirectory)" />
 
@@ -491,8 +494,8 @@
 
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian" />
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.14.04" />
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.04" />
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.10" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian.16.04" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian.16.10" />
   </Target>
 
 
