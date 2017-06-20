@@ -494,8 +494,8 @@
 
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian" />
     <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.14.04" />
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian.16.04" />
-    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=debian.16.10" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.04" />
+    <MSBuild Projects="$(ProjectPath)" Targets="BuildRuntimeStoreDeb" Properties="InstallerPlatform=ubuntu.16.10" />
   </Target>
 
 
